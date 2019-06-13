@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# IDE
+.vs*
+
+# Build folder
+[Bb]uild
