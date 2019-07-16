@@ -1,4 +1,4 @@
-* Installation
+# Installation
 
 Add `Twitch.dll` to the game files and use `plugin_load Twitch`
 
