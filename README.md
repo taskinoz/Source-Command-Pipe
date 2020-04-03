@@ -23,7 +23,7 @@ To load the plugin with Black Mesa using `plugin_load Twitch-bm`
 
 ## Build Instructions
 
-1. Clone the project including submodules
+1. Clone the project including submodules `git clone --recurse-submodules https://github.com/taskinoz/Source-Command-Pipe.git`
 
 1. Open the project in Visual Studio
 
