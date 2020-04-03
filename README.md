@@ -20,3 +20,13 @@ Run the Test.exe or `node index.js` to test the plugin. You should see the gravi
 - Black Mesa
 
 To load the plugin with Black Mesa using `plugin_load Twitch-bm`
+
+## Build Instructions
+
+1. Clone the project including submodules
+
+1. Open the project in Visual Studio
+
+1. Build project
+
+    1. If you get an error rename `#include <typeinfo.h>` in `memalloc.h` to `#include <typeinfo>`

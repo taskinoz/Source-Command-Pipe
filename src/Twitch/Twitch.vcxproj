@@ -70,8 +70,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\include\source-sdk-2013\sp\src\public\tier0;..\..\include\source-sdk-2013\sp\src\public;..\..\include\source-sdk-2013\sp\src\public\tier1;..\..\include\source-sdk-2013\sp\src\public\tier2</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;..\..\include\source-sdk-2013\sp\src\lib\public</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\include\source-sdk-2013\public\tier0;..\..\include\source-sdk-2013\public;..\..\include\source-sdk-2013\public\tier1;..\..\include\source-sdk-2013\public\tier2</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;..\..\include\source-sdk-2013\lib\public</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

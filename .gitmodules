@@ -1,3 +1,4 @@
 [submodule "include/source-sdk-2013"]
 	path = include/source-sdk-2013
-	url = https://github.com/hkva/source-sdk-2013
+	url = https://github.com/alliedmodders/hl2sdk
+	branch = sdk2013
