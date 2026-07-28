@@ -33,6 +33,18 @@ verification still requires installing each game.
 Only run trusted IPC clients. Commands received through the pipe have the same
 privileges as commands entered in the server console.
 
+## Test the pipe
+
+With the plugin loaded and a map running, use the included PowerShell client:
+
+```powershell
+.\test-pipe.ps1 "sv_gravity 400"
+```
+
+The script connects to `\\.\pipe\SourceCommands` and sends its first argument as a
+server-console command. It is attached to every GitHub release and is also available
+at `examples/test-pipe.ps1` in the repository.
+
 ## Build locally
 
 Requirements: Visual Studio 2022 with **Desktop development with C++**, Git, and a
