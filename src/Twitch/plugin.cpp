@@ -6,11 +6,12 @@
 //
 //===========================================================================//
 
-#include <stdio.h>
-#include <windows.h> 
+#include <windows.h>
+#include <atomic>
+#include <deque>
+#include <mutex>
 #include <thread>
 #include <string>
-#include <vector>
 
 //#define GAME_DLL
 #ifdef GAME_DLL
@@ -64,15 +65,14 @@ public:
 private:
 	int m_iClientCommandIndex;
 	HANDLE m_ipcPipe;
-	char m_pipeBuffer[1024];
-	DWORD m_pipeDwRead;
 	std::thread m_pipeThread;
 	IVEngineServer* m_engine;
-	edict_t* m_client;
-
-	std::vector<char*> StrSplit(char* s, const char* delimiters);
+	std::atomic<bool> m_running;
+	std::mutex m_commandMutex;
+	std::deque<std::string> m_commands;
 
 	void PipeThread();
+	void StopPipe();
 };
 
 //
@@ -85,69 +85,51 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CEmptyServerPlugin, IServerPluginCallbacks, IN
 // Purpose: constructor/destructor
 //---------------------------------------------------------------------------------
 CEmptyServerPlugin::CEmptyServerPlugin()
+	: m_iClientCommandIndex(0),
+	  m_ipcPipe(INVALID_HANDLE_VALUE),
+	  m_engine(nullptr),
+	  m_running(false)
 {
-	m_iClientCommandIndex = 0;
-
-	m_ipcPipe = CreateNamedPipe(TEXT("\\\\.\\pipe\\SourceCommands"),
-		PIPE_ACCESS_DUPLEX,
-		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,   // FILE_FLAG_FIRST_PIPE_INSTANCE is not needed but forces CreateNamedPipe(..) to fail if the pipe already exists...
-		1,
-		1024 * 16,
-		1024 * 16,
-		NMPWAIT_USE_DEFAULT_WAIT,
-		NULL);
-}
-
-std::vector<char *> CEmptyServerPlugin::StrSplit(char * s, const char * delimiters) {
-	size_t pos = 0;
-	std::vector<char *> strings;
-	char * pch = strtok(s, delimiters);
-	while (pch != NULL)
-	{
-		g_pCVar->ConsolePrintf("%s\n", pch);
-		strings.push_back(pch);
-		pch = strtok(NULL, delimiters);
-	}
-
-	return strings;
 }
 
 void CEmptyServerPlugin::PipeThread() {
-	while (m_ipcPipe != INVALID_HANDLE_VALUE) {
-		if (ConnectNamedPipe(m_ipcPipe, NULL) != FALSE) {
-			while (ReadFile(m_ipcPipe, m_pipeBuffer, sizeof(m_pipeBuffer) - 1, &m_pipeDwRead, NULL)) {
-				// add terminating zero
-				m_pipeBuffer[m_pipeDwRead] = '\0';
-				/* Old code for setting cvars
-				auto spl = CEmptyServerPlugin::StrSplit(m_pipeBuffer, " ");
+	char buffer[4096];
+	while (m_running.load()) {
+		const BOOL connected = ConnectNamedPipe(m_ipcPipe, nullptr) || GetLastError() == ERROR_PIPE_CONNECTED;
+		if (!connected) {
+			if (!m_running.load()) break;
+			continue;
+		}
 
-				if (spl.size() < 2) {
-					g_pCVar->ConsoleColorPrintf(Color(200, 50, 50, 255), "Recieved no cvar arguments from pipe. Command was %s\n", m_pipeBuffer);
-					continue;
-				}
-
-				ConVar* test = g_pCVar->FindVar(spl[0]);
-				//spl.erase(spl.begin());
-				
-				test->SetValue(spl[1]);
-				*/
-
-				m_engine->ClientCommand(m_client, m_pipeBuffer);
+		DWORD bytesRead = 0;
+		while (m_running.load() && ReadFile(m_ipcPipe, buffer, sizeof(buffer), &bytesRead, nullptr)) {
+			if (bytesRead == 0) continue;
+			std::string command(buffer, bytesRead);
+			while (!command.empty() && (command.back() == '\0' || command.back() == '\r' || command.back() == '\n'))
+				command.pop_back();
+			if (!command.empty()) {
+				std::lock_guard<std::mutex> lock(m_commandMutex);
+				m_commands.push_back(command);
 			}
 		}
-		DisconnectNamedPipe(m_ipcPipe);
+		if (m_ipcPipe != INVALID_HANDLE_VALUE) DisconnectNamedPipe(m_ipcPipe);
 	}
 }
 
-CEmptyServerPlugin::~CEmptyServerPlugin() {
-	m_pipeThread.join();
-	CloseHandle(m_ipcPipe);
+void CEmptyServerPlugin::StopPipe() {
+	m_running.store(false);
+	if (m_ipcPipe != INVALID_HANDLE_VALUE) {
+		CancelIoEx(m_ipcPipe, nullptr);
+		DisconnectNamedPipe(m_ipcPipe);
+	}
+	if (m_pipeThread.joinable()) m_pipeThread.join();
+	if (m_ipcPipe != INVALID_HANDLE_VALUE) {
+		CloseHandle(m_ipcPipe);
+		m_ipcPipe = INVALID_HANDLE_VALUE;
+	}
 }
 
-// Test command
-ConCommand testCommand2("hkva_test", []() {
-	g_pCVar->ConsolePrintf("Test command");
-	});
+CEmptyServerPlugin::~CEmptyServerPlugin() { StopPipe(); }
 
 //---------------------------------------------------------------------------------
 // Purpose: called when the plugin is loaded, load the interface we need from the engine
@@ -161,7 +143,13 @@ bool CEmptyServerPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfac
 	ConVar_Register(0);
 
 	m_engine = (IVEngineServer*)interfaceFactory(INTERFACEVERSION_VENGINESERVER, NULL);
+	if (!m_engine) return false;
 
+	m_ipcPipe = CreateNamedPipeA("\\\\.\\pipe\\SourceCommands",
+		PIPE_ACCESS_DUPLEX, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+		1, 16 * 1024, 16 * 1024, NMPWAIT_USE_DEFAULT_WAIT, nullptr);
+	if (m_ipcPipe == INVALID_HANDLE_VALUE) return false;
+	m_running.store(true);
 	m_pipeThread = std::thread(&CEmptyServerPlugin::PipeThread, this);
 
 	return true;
@@ -172,6 +160,7 @@ bool CEmptyServerPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfac
 //---------------------------------------------------------------------------------
 void CEmptyServerPlugin::Unload(void)
 {
+	StopPipe();
 	ConVar_Unregister();
 	DisconnectTier2Libraries();
 	DisconnectTier1Libraries();
@@ -218,6 +207,15 @@ void CEmptyServerPlugin::ServerActivate(edict_t* pEdictList, int edictCount, int
 // Purpose: called once per server frame, do recurring work here (like checking for timeouts)
 //---------------------------------------------------------------------------------
 void CEmptyServerPlugin::GameFrame(bool simulating) {
+	std::deque<std::string> commands;
+	{
+		std::lock_guard<std::mutex> lock(m_commandMutex);
+		commands.swap(m_commands);
+	}
+	for (std::string& command : commands) {
+		command.push_back('\n');
+		m_engine->ServerCommand(command.c_str());
+	}
 }
 
 //---------------------------------------------------------------------------------
@@ -231,7 +229,6 @@ void CEmptyServerPlugin::LevelShutdown(void) // !!!!this can get called multiple
 // Purpose: called when a client spawns into a server (i.e as they begin to play)
 //---------------------------------------------------------------------------------
 void CEmptyServerPlugin::ClientActive(edict_t* pEntity) {
-	m_client = pEntity;
 }
 
 //---------------------------------------------------------------------------------

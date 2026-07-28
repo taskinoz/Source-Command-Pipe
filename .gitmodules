@@ -1,4 +1,4 @@
 [submodule "include/source-sdk-2013"]
 	path = include/source-sdk-2013
-	url = https://github.com/alliedmodders/hl2sdk
+	url = https://github.com/alliedmodders/hl2sdk.git
 	branch = sdk2013
