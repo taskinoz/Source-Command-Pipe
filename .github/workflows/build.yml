@@ -11,18 +11,29 @@ permissions:
 jobs:
   windows:
     runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [sdk2013, bms, portal2, l4d, l4d2]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v3
         with:
-          submodules: true
+          msbuild-architecture: x64
+
+      - name: Check out HL2SDK branch
+        shell: pwsh
+        run: git clone --depth 1 --branch ${{ matrix.sdk }} https://github.com/alliedmodders/hl2sdk.git dependencies/hl2sdk
 
       - name: Build release DLL
         shell: pwsh
-        run: msbuild src/Twitch.sln /m /p:Configuration=Release /p:Platform=x86
+        run: msbuild src/Twitch.sln /m /p:Configuration=Release /p:Platform=x86 /p:SourceEngine=${{ matrix.sdk }} /p:HL2SDKRoot=$env:GITHUB_WORKSPACE\dependencies\hl2sdk
 
       - name: Upload DLL
         uses: actions/upload-artifact@v4
         with:
-          name: SourceCommandPipe-windows-x86
-          path: src/build/Release/SourceCommandPipe.dll
+          name: SourceCommandPipe-${{ matrix.sdk }}-windows-x86
+          path: src/build/Release/SourceCommandPipe-${{ matrix.sdk }}.dll
           if-no-files-found: error

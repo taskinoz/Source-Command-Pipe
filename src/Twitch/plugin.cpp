@@ -46,6 +46,9 @@ public:
 	virtual void GameFrame(bool simulating);
 	virtual void LevelShutdown(void);
 	virtual void ClientActive(edict_t* pEntity);
+#if defined(SOURCE_ENGINE_PORTAL2)
+	virtual void ClientFullyConnect(edict_t* pEntity);
+#endif
 	virtual void ClientDisconnect(edict_t* pEntity);
 	virtual void ClientPutInServer(edict_t* pEntity, char const* playername);
 	virtual void SetCommandClient(int index);
@@ -185,7 +188,7 @@ void CEmptyServerPlugin::UnPause(void)
 //---------------------------------------------------------------------------------
 const char* CEmptyServerPlugin::GetPluginDescription(void)
 {
-	return "Test Plugin, hkva";
+	return "Source Command Pipe";
 }
 
 //---------------------------------------------------------------------------------
@@ -230,6 +233,11 @@ void CEmptyServerPlugin::LevelShutdown(void) // !!!!this can get called multiple
 //---------------------------------------------------------------------------------
 void CEmptyServerPlugin::ClientActive(edict_t* pEntity) {
 }
+
+#if defined(SOURCE_ENGINE_PORTAL2)
+void CEmptyServerPlugin::ClientFullyConnect(edict_t* pEntity) {
+}
+#endif
 
 //---------------------------------------------------------------------------------
 // Purpose: called when a client leaves a server (or is timed out)

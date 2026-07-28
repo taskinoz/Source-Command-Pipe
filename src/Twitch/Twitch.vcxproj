@@ -38,9 +38,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <HL2SDKRoot Condition="'$(HL2SDKRoot)'==''">$(MSBuildThisFileDirectory)..\..\include\source-sdk-2013</HL2SDKRoot>
-    <TargetName>SourceCommandPipe</TargetName>
+    <SourceEngine Condition="'$(SourceEngine)'==''">sdk2013</SourceEngine>
+    <SourceEngineDefine Condition="'$(SourceEngine)'=='portal2'">SOURCE_ENGINE_PORTAL2</SourceEngineDefine>
+    <EngineAdditionalDependencies Condition="'$(SourceEngine)'=='portal2'">interfaces.lib;</EngineAdditionalDependencies>
+    <TargetName>SourceCommandPipe-$(SourceEngine)</TargetName>
     <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)build\obj\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)build\obj\$(Configuration)\$(SourceEngine)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -48,13 +51,14 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;COMPILER_MSVC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;COMPILER_MSVC;COMPILER_MSVC32;$(SourceEngineDefine);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)compat;$(HL2SDKRoot)\public;$(HL2SDKRoot)\public\tier0;$(HL2SDKRoot)\public\tier1;$(HL2SDKRoot)\public\tier2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(HL2SDKRoot)\lib\public;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>tier0.lib;tier1.lib;tier2.lib;vstdlib.lib;mathlib.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(EngineAdditionalDependencies)tier0.lib;tier1.lib;tier2.lib;vstdlib.lib;mathlib.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
